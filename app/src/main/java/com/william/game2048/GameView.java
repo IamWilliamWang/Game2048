@@ -11,11 +11,10 @@ import java.util.List;
 import android.app.AlertDialog;
 import android.app.Notification;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.content.Context;
 import android.content.DialogInterface;
-import android.content.Intent;
 import android.graphics.Point;
+import android.graphics.drawable.Drawable;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -118,7 +117,7 @@ public class GameView extends LinearLayout {
 		try {
 			checkFileExist = MainActivity.getMainActivity().openFileInput(saveFileName);
 			checkFileExist.close();
-			resetCards();
+			recoverCards();
 			MainActivity.getMainActivity().showScore();
 			MainActivity.getMainActivity().showBestScore(MainActivity.getMainActivity().getBestScoreData());
 		} catch (Exception e) {
@@ -133,6 +132,7 @@ public class GameView extends LinearLayout {
 	}
 
 	public void restartGame(){
+		clearDataBase();
 
 		MainActivity aty = MainActivity.getMainActivity();
 		aty.clearScore();
@@ -146,6 +146,25 @@ public class GameView extends LinearLayout {
 
 		addRandomNum();
 		addRandomNum();
+	}
+
+	private void clearDataBase() {
+		MainActivity.getMainActivity().clearScore();
+		MainActivity.getMainActivity().saveScore(0);
+		try {
+			FileOutputStream outputCardsStream =
+					MainActivity.getMainActivity().openFileOutput(saveFileName, Context.MODE_PRIVATE);
+			DataOutputStream dos = new DataOutputStream(outputCardsStream);
+
+			dos.writeInt(2);
+			for(int i=1; i<Config.LINES*Config.LINES; i++) {
+					dos.writeInt(0);
+			}
+			dos.flush();
+			dos.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	private void swipeLeft(){
@@ -188,7 +207,7 @@ public class GameView extends LinearLayout {
 		if (merge) {
 			addRandomNum();
 			checkComplete();
-			showTips();
+			MainActivity.getMainActivity().showTips();
 		}
 	}
 	private void swipeRight(){
@@ -227,7 +246,7 @@ public class GameView extends LinearLayout {
 		if (merge) {
 			addRandomNum();
 			checkComplete();
-			showTips();
+			MainActivity.getMainActivity().showTips();
 		}
 	}
 	private void swipeUp(){
@@ -268,7 +287,7 @@ public class GameView extends LinearLayout {
 		if (merge) {
 			addRandomNum();
 			checkComplete();
-			showTips();
+			MainActivity.getMainActivity().showTips();
 		}
 	}
 	private void swipeDown(){
@@ -307,7 +326,7 @@ public class GameView extends LinearLayout {
 		if (merge) {
 			addRandomNum();
 			checkComplete();
-			showTips();
+			MainActivity.getMainActivity().showTips();
 		}
 	}
 
@@ -334,8 +353,8 @@ public class GameView extends LinearLayout {
 
 	private void checkComplete(){
 
-		boolean complete = true;
-		boolean win = false;
+		complete = true;
+		win = false;
 		OUT:
 			for (int y = 0; y < Config.LINES; y++) {
 				for (int x = 0; x < Config.LINES; x++) {
@@ -362,55 +381,43 @@ public class GameView extends LinearLayout {
 			}
 
 		if (complete==true && win==false) {
-			new AlertDialog.Builder(getContext()).setTitle("对不起").setMessage("游戏结束").setPositiveButton("重新开始", new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-					restartGame();
-				}
-			}).show();
+			new AlertDialog.Builder(getContext())
+					.setTitle("对不起")
+					.setMessage("游戏结束")
+					.setPositiveButton("重新开始", new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+							restartGame();
+						}
+					})
+					.setNegativeButton("分享至QQ空间", new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+							MainActivity.getMainActivity().doshareToQzone();
+						}
+					})
+					.show();
 		}
 
-		if(win==true && MainActivity.getMainActivity().gameNeverWin ==false) {
-			new AlertDialog.Builder(getContext()).setTitle("恭喜").setMessage("你赢了！").setPositiveButton("重新开始", new DialogInterface.OnClickListener() {
-				@Override
-				public void onClick(DialogInterface dialog, int which) {
-					restartGame();
-				}
-			}).show();
+		if(win==true && MainActivity.getMainActivity().gameNeverWin == false) {
+			new AlertDialog.Builder(getContext())
+					.setTitle("恭喜")
+					.setMessage("你赢了！")
+					.setIcon(R.drawable.ic_launcher)
+					.setPositiveButton("重新开始", new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+							restartGame();
+						}
+					})
+					.setNegativeButton("分享至QQ空间", new DialogInterface.OnClickListener() {
+						@Override
+						public void onClick(DialogInterface dialog, int which) {
+							MainActivity.getMainActivity().doshareToQzone();
+						}
+					})
+					.show();
 		}
-	}
-
-	private void showTips() {
-		if(MainActivity.getMainActivity().getScore() > 10000 && MainActivity.getMainActivity().getShowTips() == true) {
-//			Toast toast = Toast.makeText(getContext(), "好棒啊！都到一万分了，快点击选项栏，分享给你的朋友吧！", Toast.LENGTH_LONG);
-//			toast.setGravity(Gravity.CENTER,0,0);
-//			toast.show();
-//消息通知栏
-			//定义NotificationManager
-			String ns = Context.NOTIFICATION_SERVICE;
-			NotificationManager mNotificationManager = (NotificationManager) MainActivity.getMainActivity().getSystemService(ns);
-			//定义通知栏展现的内容信息
-			int icon = R.drawable.ic_launcher;
-			CharSequence tickerText = "来自2048游戏的小提示";
-			long when = System.currentTimeMillis();
-			Notification notification = new Notification(icon, tickerText, when);
-
-			//定义下拉通知栏时要展现的内容信息
-			Context context = MainActivity.getMainActivity().getApplicationContext();
-			CharSequence contentTitle = "好棒啊！都到一万分了";
-			CharSequence contentText = "快点击选项栏，分享给你的朋友吧！";
-//			Intent notificationIntent = new Intent(MainActivity.getMainActivity(), MainActivity.class);
-//			PendingIntent contentIntent = PendingIntent.getActivity(MainActivity.getMainActivity(), 0,
-//					notificationIntent, 0);
-			notification.setLatestEventInfo(context, contentTitle, contentText,
-					null);
-
-			//用mNotificationManager的notify方法通知用户生成标题栏消息通知
-			mNotificationManager.notify(1, notification);
-
-		}
-		MainActivity.getMainActivity().setShowTips(false);
-
 	}
 
 	public void saveCards(){
@@ -434,7 +441,7 @@ public class GameView extends LinearLayout {
 		}
 	}
 
-	public void resetCards() {
+	public void recoverCards() {
 		/*加载分数*/
 		MainActivity aty = MainActivity.getMainActivity();
 		aty.setScore(aty.getScoreData());
@@ -486,6 +493,13 @@ public class GameView extends LinearLayout {
 		toast.setGravity(Gravity.CENTER,0,0);
 		toast.show();
 	}
+
+	public boolean isComplete() {
+		return complete;
+	}
+
+	private boolean complete = true;
+	private boolean win = false;
 
 	private Card[][] cardsMap = new Card[Config.LINES][Config.LINES];
 	private List<Point> emptyPoints = new ArrayList<Point>();
